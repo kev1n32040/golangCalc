@@ -9,20 +9,21 @@ import (
 	"strings"
 )
 
-// Fraction represents a fraction with numerator and denominator
+// Fraction представляет обыкновенную дробь с числителем и знаменателем
 type Fraction struct {
 	numerator   int
 	denominator int
 }
 
-// Expression represents either a fraction or a regular number
+// Expression представляет математическое выражение, которое может быть
+// либо обыкновенной дробью, либо десятичным числом
 type Expression struct {
 	isFraction bool
 	fraction   Fraction
 	number     float64
 }
 
-// Greatest Common Divisor
+// gcd вычисляет наибольший общий делитель двух чисел
 func gcd(a, b int) int {
 	for b != 0 {
 		a, b = b, a%b
@@ -30,7 +31,7 @@ func gcd(a, b int) int {
 	return a
 }
 
-// Simplify fraction
+// simplify упрощает дробь, деля числитель и знаменатель на их НОД
 func simplify(f Fraction) Fraction {
 	g := gcd(f.numerator, f.denominator)
 	return Fraction{
@@ -39,35 +40,35 @@ func simplify(f Fraction) Fraction {
 	}
 }
 
-// Add two fractions
+// add складывает две дроби
 func add(f1, f2 Fraction) Fraction {
 	numerator := f1.numerator*f2.denominator + f2.numerator*f1.denominator
 	denominator := f1.denominator * f2.denominator
 	return simplify(Fraction{numerator, denominator})
 }
 
-// Subtract two fractions
+// subtract вычитает одну дробь из другой
 func subtract(f1, f2 Fraction) Fraction {
 	numerator := f1.numerator*f2.denominator - f2.numerator*f1.denominator
 	denominator := f1.denominator * f2.denominator
 	return simplify(Fraction{numerator, denominator})
 }
 
-// Multiply two fractions
+// multiply умножает две дроби
 func multiply(f1, f2 Fraction) Fraction {
 	numerator := f1.numerator * f2.numerator
 	denominator := f1.denominator * f2.denominator
 	return simplify(Fraction{numerator, denominator})
 }
 
-// Divide two fractions
+// divide делит одну дробь на другую
 func divide(f1, f2 Fraction) Fraction {
 	numerator := f1.numerator * f2.denominator
 	denominator := f1.denominator * f2.numerator
 	return simplify(Fraction{numerator, denominator})
 }
 
-// Parse fraction from string
+// parseFraction преобразует строку в формате "a/b" в структуру Fraction
 func parseFraction(s string) (Fraction, error) {
 	parts := strings.Split(s, "/")
 	if len(parts) != 2 {
@@ -147,6 +148,8 @@ func calculateExpression(expr1, expr2 Expression, operator string) (Expression, 
 	}
 }
 
+// solveQuadraticEquation решает квадратное уравнение вида ax² + bx + c = 0
+// Возвращает два корня, флаг наличия решения и флаг наличия двух различных корней
 func solveQuadraticEquation(a, b, c float64) (float64, float64, bool, bool) {
 	// Вычисляем дискриминант
 	D := b*b - 4*a*c
@@ -176,6 +179,8 @@ func solveQuadraticEquation(a, b, c float64) (float64, float64, bool, bool) {
 	return x1, x2, true, true
 }
 
+// parseCoefficient преобразует строку в числовой коэффициент
+// Поддерживает форматы: +2x², -3x², *4x², /2x², +3x, -2x, *4x, /2x, +5, -3, *4, /2
 func parseCoefficient(input string) (float64, error) {
 	input = strings.TrimSpace(input)
 
@@ -260,6 +265,7 @@ func parseCoefficient(input string) (float64, error) {
 	}
 }
 
+// printMenu выводит главное меню программы
 func printMenu() {
 	fmt.Println("\n=== Калькулятор ===")
 	fmt.Println("1. Вычислить выражение с числами (например: 5 + 2 или 5.5 + 2.3)")
@@ -451,3 +457,5 @@ func main() {
 		reader.ReadString('\n')
 	}
 }
+
+// Напишите go build main.go чтобы собрать программу

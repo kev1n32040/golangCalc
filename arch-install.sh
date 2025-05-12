@@ -1,104 +1,29 @@
 #!/bin/bash
 
-# Arch Linux Auto Install Script (BIOS + UEFI)
-# Timezone: Asia/Krasnoyarsk
-# Author: kev1n32040
+# Обновляем систему
+sudo pacman -Syu --noconfirm
 
-set -euo pipefail
+# Устанавливаем Hyprland и окружение
+sudo pacman -S --noconfirm hyprland xdg-desktop-portal-hyprland xdg-utils \
+    wayland wlroots kitty thunar pipewire wireplumber \
+    ttf-font-awesome ttf-jetbrains-mono ttf-nerd-fonts-symbols \
+    network-manager-applet waybar wofi mako grim slurp swappy \
+    polkit-gnome
 
-echo "==> Удаление повреждённых пакетов и обновление ключей..."
-rm -f /var/cache/pacman/pkg/*.pkg.tar.*
+# Копируем конфиги Hyprland
+mkdir -p ~/.config/hypr
+cp -r /etc/xdg/hypr/* ~/.config/hypr/
 
-pacman -Sy --noconfirm archlinux-keyring
+# Создаём .xinitrc с запуском Hyprland
+echo "exec Hyprland" > ~/.xinitrc
 
-pacman-key --init
-pacman-key --populate
-
-echo "==> Проверка ключей завершена."
-
-# Variables
-disk="/dev/sda"
-hostname="archlinux"
-username="user"
-password="password"
-timezone="Asia/Krasnoyarsk"
-locale="en_US.UTF-8 UTF-8"
-locale_conf="en_US.UTF-8"
-
-# Check boot mode
-if [ -d /sys/firmware/efi ]; then
-    boot_mode="UEFI"
-else
-    boot_mode="BIOS"
-fi
-
-echo "Installing in $boot_mode mode."
-
-# Clear and partition disk
-wipefs -af "$disk"
-sgdisk -Zo "$disk"
-
-if [ "$boot_mode" = "UEFI" ]; then
-    sgdisk -n1:0:+300M -t1:ef00 "$disk"
-    sgdisk -n2:0:0     -t2:8300 "$disk"
-    part_boot="${disk}1"
-    part_root="${disk}2"
-else
-    sgdisk -a 1 -n1:2048:+1M -t1:ef02 "$disk"
-    sgdisk -n2:0:0     -t2:8300 "$disk"
-    part_root="${disk}2"
-fi
-
-sleep 2
-
-# Format partitions
-if [ "$boot_mode" = "UEFI" ]; then
-    mkfs.fat -F32 "$part_boot"
-fi
-mkfs.ext4 -F "$part_root"
-
-# Mount
-mount "$part_root" /mnt
-if [ "$boot_mode" = "UEFI" ]; then
-    mkdir -p /mnt/boot
-    mount "$part_boot" /mnt/boot
-fi
-
-# Install base system
-pacstrap /mnt base linux linux-firmware bash sudo nano networkmanager grub efibootmgr
-
-# Generate fstab
-genfstab -U /mnt >> /mnt/etc/fstab
-
-# Chroot and configure system
-arch-chroot /mnt /bin/bash <<EOF
-
-ln -sf /usr/share/zoneinfo/$timezone /etc/localtime
-hwclock --systohc
-
-echo "$locale" > /etc/locale.gen
-locale-gen
-
-echo "LANG=$locale_conf" > /etc/locale.conf
-echo "$hostname" > /etc/hostname
-echo -e "127.0.0.1\tlocalhost\n::1\tlocalhost\n127.0.1.1\t$hostname.localdomain\t$hostname" > /etc/hosts
-
-useradd -m -G wheel -s /bin/bash $username
-echo "$username:$password" | chpasswd
-echo "root:$password" | chpasswd
-
-sed -i 's/^# %wheel ALL=(ALL:ALL) ALL/%wheel ALL=(ALL:ALL) ALL/' /etc/sudoers
-
-systemctl enable NetworkManager
-
-if [ "$boot_mode" = "UEFI" ]; then
-    grub-install --target=x86_64-efi --efi-directory=/boot --bootloader-id=GRUB
-else
-    grub-install --target=i386-pc "$disk"
-fi
-
-grub-mkconfig -o /boot/grub/grub.cfg
+# Создаём базовый конфиг для уведомлений
+mkdir -p ~/.config/mako
+cat <<EOF > ~/.config/mako/config
+background-color=#1e1e2e
+text-color=#ffffff
+border-color=#89b4fa
 EOF
 
-# Done
-echo -e "\nInstallation complete! You can reboot now."
+# Сообщение о завершении
+echo "Hyprland и окружение установлены. Используй 'Hyprland' или 'startx' для запуска."

@@ -1,36 +1,46 @@
 #!/bin/bash
 
-# Установим зависимости
-sudo pacman -Syu --needed --noconfirm \
-  base-devel git cmake meson ninja \
-  wayland wayland-protocols \
-  libxkbcommon libinput libxcb xcb-util \
-  pixman xcb-util-image xcb-util-wm \
-  cairo pango \
-  gtk3 \
-  vulkan-headers vulkan-icd-loader \
-  glslang \
-  libdrm libcap \
-  systemd \
-  xwayland \
-  hyprland \
-  waybar \
-  kitty \
-  xdg-desktop-portal xdg-desktop-portal-hyprland \
-  ttf-font-awesome noto-fonts \
-  network-manager-applet \
-  pipewire wireplumber \
+set -e
+
+echo "== Проверка подключения к сети..."
+if ! ping -c 1 archlinux.org &>/dev/null; then
+    echo ">> Нет подключения. Запускаю dhcpcd..."
+    sudo dhcpcd || { echo "× Не удалось подключиться к сети"; exit 1; }
+fi
+
+echo "== Обновление зеркал..."
+if command -v reflector &>/dev/null; then
+    sudo reflector --latest 20 --protocol https --sort rate --save /etc/pacman.d/mirrorlist || echo ">> Reflector не сработал, продолжаю..."
+else
+    echo ">> Reflector не установлен. Добавляю зеркала вручную..."
+    sudo bash -c 'cat > /etc/pacman.d/mirrorlist' <<EOF
+Server = https://mirror.yandex.ru/archlinux/\$repo/os/\$arch
+Server = https://mirror.alpix.eu/archlinux/\$repo/os/\$arch
+EOF
+fi
+
+echo "== Обновление базы пакетов..."
+sudo pacman -Syyu --noconfirm || echo ">> Обновление с ошибками, продолжаю..."
+
+echo "== Установка Hyprland и зависимостей..."
+sudo pacman -S --noconfirm hyprland \
+  xdg-desktop-portal-hyprland \
+  waybar kitty thunar rofi dmenu foot \
+  wl-clipboard brightnessctl playerctl grim slurp pavucontrol \
+  network-manager-applet nm-connection-editor \
   sddm
 
-# Клонируем репозиторий Hyprland
-git clone --recursive https://github.com/hyprwm/Hyprland.git
-cd Hyprland || exit 1
+echo "== Включение SDDM..."
+sudo systemctl enable sddm.service
 
-# Создаем build директорию
-mkdir build
-cd build || exit 1
+echo "== Создание пользователя (если нужно)..."
+read -p "Введите имя пользователя: " USERNAME
+if ! id "$USERNAME" &>/dev/null; then
+    sudo useradd -m -G wheel -s /bin/bash "$USERNAME"
+    sudo passwd "$USERNAME"
+fi
 
-# Генерация сборки и установка
-cmake ..
-make -j$(nproc)
-sudo make install
+echo "== Настройка конфигов Hyprland..."
+sudo -u "$USERNAME" bash -c '
+mkdir -p ~/.config/hypr
+cp -r /etc/xdg/hypr/* ~/.config/hypr/*

@@ -6,6 +6,16 @@
 
 set -euo pipefail
 
+echo "==> Удаление повреждённых пакетов и обновление ключей..."
+rm -f /var/cache/pacman/pkg/*.pkg.tar.*
+
+pacman -Sy --noconfirm archlinux-keyring
+
+pacman-key --init
+pacman-key --populate
+
+echo "==> Проверка ключей завершена."
+
 # Variables
 disk="/dev/sda"
 hostname="archlinux"

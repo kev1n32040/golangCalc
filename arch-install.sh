@@ -65,5 +65,8 @@ sudo systemctl start NetworkManager
 # Перезапуск xdg-desktop-portal
 systemctl --user restart xdg-desktop-portal xdg-desktop-portal-hyprland
 
+kitty &
+
+
 echo "✅ Установка и настройка завершена."
 echo "🔁 Перезапусти Hyprland командой: Hyprland"

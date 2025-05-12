@@ -1,46 +1,50 @@
 #!/bin/bash
-
 set -e
 
-echo "== Проверка подключения к сети..."
-if ! ping -c 1 archlinux.org &>/dev/null; then
-    echo ">> Нет подключения. Запускаю dhcpcd..."
-    sudo dhcpcd || { echo "× Не удалось подключиться к сети"; exit 1; }
-fi
+echo "==> Обновление ключей..."
+sudo pacman-key --init || true
+sudo pacman-key --populate archlinux || true
+sudo pacman -Sy archlinux-keyring --noconfirm || true
 
-echo "== Обновление зеркал..."
-if command -v reflector &>/dev/null; then
-    sudo reflector --latest 20 --protocol https --sort rate --save /etc/pacman.d/mirrorlist || echo ">> Reflector не сработал, продолжаю..."
-else
-    echo ">> Reflector не установлен. Добавляю зеркала вручную..."
-    sudo bash -c 'cat > /etc/pacman.d/mirrorlist' <<EOF
-Server = https://mirror.yandex.ru/archlinux/\$repo/os/\$arch
-Server = https://mirror.alpix.eu/archlinux/\$repo/os/\$arch
-EOF
-fi
+echo "==> Установка зависимостей..."
+sudo pacman -Syu --noconfirm || true
+sudo pacman -S --noconfirm git base-devel xdg-desktop-portal xdg-desktop-portal-hyprland pipewire wireplumber \
+    polkit xdg-utils grim slurp wl-clipboard wf-recorder waybar rofi \
+    firefox neovim network-manager-applet blueman gvfs gvfs-mtp \
+    hyprpaper thunar pavucontrol sddm || true
 
-echo "== Обновление базы пакетов..."
-sudo pacman -Syyu --noconfirm || echo ">> Обновление с ошибками, продолжаю..."
+echo "==> Добавление репозитория Hyprland..."
+sudo bash -c 'cat > /etc/pacman.conf <<EOF
+[options]
+HoldPkg     = pacman glibc
+Architecture = auto
+Color
+CheckSpace
+ParallelDownloads = 5
+SigLevel    = Required DatabaseOptional
+LocalFileSigLevel = Optional
 
-echo "== Установка Hyprland и зависимостей..."
-sudo pacman -S --noconfirm hyprland \
-  xdg-desktop-portal-hyprland \
-  waybar kitty thunar rofi dmenu foot \
-  wl-clipboard brightnessctl playerctl grim slurp pavucontrol \
-  network-manager-applet nm-connection-editor \
-  sddm
+[core]
+Include = /etc/pacman.d/mirrorlist
 
-echo "== Включение SDDM..."
-sudo systemctl enable sddm.service
+[extra]
+Include = /etc/pacman.d/mirrorlist
 
-echo "== Создание пользователя (если нужно)..."
-read -p "Введите имя пользователя: " USERNAME
-if ! id "$USERNAME" &>/dev/null; then
-    sudo useradd -m -G wheel -s /bin/bash "$USERNAME"
-    sudo passwd "$USERNAME"
-fi
+[community]
+Include = /etc/pacman.d/mirrorlist
 
-echo "== Настройка конфигов Hyprland..."
-sudo -u "$USERNAME" bash -c '
-mkdir -p ~/.config/hypr
-cp -r /etc/xdg/hypr/* ~/.config/hypr/*
+[multilib]
+Include = /etc/pacman.d/mirrorlist
+
+[hyprland]
+Server = https://repo.hyprland.org
+SigLevel = Optional TrustAll
+EOF'
+
+echo "==> Установка Hyprland..."
+sudo pacman -Syu hyprland --noconfirm || true
+
+echo "==> Настройка SDDM..."
+sudo systemctl enable sddm
+
+echo "==> Установка завершена! Теперь можно перезагрузиться."

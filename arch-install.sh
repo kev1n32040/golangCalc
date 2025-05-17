@@ -1,50 +1,58 @@
 #!/bin/bash
+
 set -e
 
-echo "==> Обновление ключей..."
-sudo pacman-key --init || true
-sudo pacman-key --populate archlinux || true
-sudo pacman -Sy archlinux-keyring --noconfirm || true
+echo "🔧 Обновление системы..."
+sudo apt update && sudo apt upgrade -y
 
-echo "==> Установка зависимостей..."
-sudo pacman -Syu --noconfirm || true
-sudo pacman -S --noconfirm git base-devel xdg-desktop-portal xdg-desktop-portal-hyprland pipewire wireplumber \
-    polkit xdg-utils grim slurp wl-clipboard wf-recorder waybar rofi \
-    firefox neovim network-manager-applet blueman gvfs gvfs-mtp \
-    hyprpaper thunar pavucontrol sddm || true
+echo "📦 Установка зависимостей..."
+sudo apt install -y \
+  build-essential cmake meson ninja-build git curl wget unzip \
+  libwayland-dev libxkbcommon-dev libxkbcommon-x11-dev wayland-protocols \
+  libegl1-mesa-dev libgles2-mesa-dev libdrm-dev libgbm-dev libinput-dev \
+  libxcb1-dev libxcb-composite0-dev libxcb-xfixes0-dev libpixman-1-dev \
+  libudev-dev libseat-dev libxcb-ewmh-dev libxcb-icccm4-dev \
+  libxcb-image0-dev libxcb-util0-dev libxcb-randr0-dev libxcb-xinerama0-dev \
+  libxcb-xkb-dev libglm-dev libvulkan-dev vulkan-utils \
+  xdg-desktop-portal xdg-desktop-portal-wlr wl-clipboard \
+  grim slurp wofi waybar foot mako swww
 
-echo "==> Добавление репозитория Hyprland..."
-sudo bash -c 'cat > /etc/pacman.conf <<EOF
-[options]
-HoldPkg     = pacman glibc
-Architecture = auto
-Color
-CheckSpace
-ParallelDownloads = 5
-SigLevel    = Required DatabaseOptional
-LocalFileSigLevel = Optional
+echo "📁 Клонирование Hyprland..."
+git clone https://github.com/hyprwm/Hyprland.git --recursive
+cd Hyprland
 
-[core]
-Include = /etc/pacman.d/mirrorlist
+echo "⚙️ Сборка Hyprland..."
+mkdir -p build && cd build
+cmake .. -DCMAKE_BUILD_TYPE=Release
+make -j$(nproc)
+sudo make install
+cd ../..
 
-[extra]
-Include = /etc/pacman.d/mirrorlist
+echo "📁 Создание конфигурации..."
+mkdir -p ~/.config/hypr
+cp -r Hyprland/example/* ~/.config/hypr/
 
-[community]
-Include = /etc/pacman.d/mirrorlist
+echo "🖼 Установка обоев и стилей (swww, themes)..."
+mkdir -p ~/Pictures/wallpapers
+wget -O ~/Pictures/wallpapers/default.jpg https://w.wallhaven.cc/full/6o/wallhaven-6owq7q.jpg
 
-[multilib]
-Include = /etc/pacman.d/mirrorlist
+cat <<EOF > ~/.config/hypr/hyprland.conf
+source=~/.config/hypr/conf/main.conf
+EOF
 
-[hyprland]
-Server = https://repo.hyprland.org
-SigLevel = Optional TrustAll
-EOF'
+mkdir -p ~/.config/hypr/conf
 
-echo "==> Установка Hyprland..."
-sudo pacman -Syu hyprland --noconfirm || true
+cat <<EOF > ~/.config/hypr/conf/main.conf
+exec-once = swww-daemon & swww img ~/Pictures/wallpapers/default.jpg
+exec-once = waybar &
+exec-once = foot &
+exec-once = mako
+exec-once = wofi --show drun
 
-echo "==> Настройка SDDM..."
-sudo systemctl enable sddm
+monitor=,preferred,auto,1
+EOF
 
-echo "==> Установка завершена! Теперь можно перезагрузиться."
+echo "📥 Установка Hyprland завершена."
+echo "🖥 Выйдите в TTY (Ctrl+Alt+F2), войдите и запустите Hyprland командой:"
+echo
+echo "    Hyprland"

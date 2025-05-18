@@ -2,68 +2,42 @@
 
 set -e
 
-echo "🔧 Обновление системы..."
-sudo apt update && sudo apt upgrade -y
+# === Настройки ===
+REPO_URL="https://github.com/hyprwm/Hyprland.git"
+REPO_DIR="$HOME/Hyprland"
+LOG_FILE="$HOME/hyprland_install.log"
 
-echo "📦 Установка зависимостей через APT..."
-sudo apt install -y \
-  build-essential cmake meson ninja-build git curl wget unzip \
-  libwayland-dev libxkbcommon-dev libxkbcommon-x11-dev wayland-protocols \
-  libegl1-mesa-dev libgles2-mesa-dev libdrm-dev libgbm-dev libinput-dev \
-  libxcb1-dev libxcb-composite0-dev libxcb-xfixes0-dev libpixman-1-dev \
-  libudev-dev libseat-dev libxcb-ewmh-dev libxcb-icccm4-dev \
-  libxcb-image0-dev libxcb-util0-dev libxcb-randr0-dev libxcb-xinerama0-dev \
-  libxcb-xkb-dev libglm-dev libvulkan-dev vulkan-tools \
-  xdg-desktop-portal xdg-desktop-portal-wlr wl-clipboard \
-  grim slurp wofi waybar foot \
-  cargo libgtk-3-dev libpango1.0-dev libevdev-dev \
-  libgdk-pixbuf2.0-dev libdbus-1-dev libcairo2-dev libglib2.0-dev
+# === Проверка наличия Hyprland ===
+if command -v Hyprland >/dev/null 2>&1; then
+    echo "[INFO] Hyprland уже установлен. Переустанавливаем..." | tee -a "$LOG_FILE"
+    rm -rf "$REPO_DIR"
+else
+    echo "[INFO] Устанавливаем Hyprland впервые..." | tee -a "$LOG_FILE"
+fi
 
-echo "🧱 Сборка mako..."
-git clone https://github.com/emersion/mako.git
-cd mako
-meson build
-ninja -C build
-sudo ninja -C build install
-cd ..
-rm -rf mako
+# === Установка зависимостей ===
+echo "[INFO] Установка зависимостей..." | tee -a "$LOG_FILE"
+sudo apt update && sudo apt install -y \
+  build-essential cmake meson git \
+  wayland-protocols libwayland-dev libxkbcommon-dev libpixman-1-dev \
+  libegl-dev libglvnd-dev libdrm-dev libvulkan-dev \
+  libxcb1-dev libxcb-composite0-dev libxcb-xfixes0-dev \
+  libxcb-image0-dev libxcb-render0-dev libxcb-icccm4-dev \
+  libxcb-util0-dev libxcb-cursor-dev libx11-xcb-dev \
+  libxrender-dev libxext-dev libx11-dev \
+  ninja-build pkg-config python3-pip \
+  libinput-dev libudev-dev libseat-dev libxcb-ewmh-dev \
+  libpam0g-dev libdbus-1-dev libsystemd-dev
 
-echo "🧱 Сборка swww..."
-git clone https://github.com/Lioness100/swww.git
-cd swww
-cargo build --release
-sudo cp target/release/swww* /usr/local/bin/
-cd ..
-rm -rf swww
+# === Клонирование репозитория ===
+echo "[INFO] Клонируем репозиторий Hyprland..." | tee -a "$LOG_FILE"
+git clone --recursive "$REPO_URL" "$REPO_DIR"
+cd "$REPO_DIR"
 
-echo "📁 Клонирование Hyprland..."
-git clone https://github.com/hyprwm/Hyprland.git --recursive
-cd Hyprland
-mkdir -p build && cd build
-cmake .. -DCMAKE_BUILD_TYPE=Release
-make -j$(nproc)
-sudo make install
-cd ../..
-rm -rf Hyprland
+# === Сборка Hyprland ===
+echo "[INFO] Сборка Hyprland..." | tee -a "$LOG_FILE"
+make all | tee -a "$LOG_FILE"
+sudo make install | tee -a "$LOG_FILE"
 
-echo "📁 Создание конфигурации..."
-mkdir -p ~/.config/hypr
-cat <<EOF > ~/.config/hypr/hyprland.conf
-exec-once = swww-daemon & swww img ~/Pictures/wallpapers/default.jpg
-exec-once = waybar &
-exec-once = foot &
-exec-once = mako
-exec-once = wofi --show drun
-
-monitor=,preferred,auto,1
-EOF
-
-echo "🌄 Загрузка обоев..."
-mkdir -p ~/Pictures/wallpapers
-wget -O ~/Pictures/wallpapers/default.jpg https://w.wallhaven.cc/full/6o/wallhaven-6owq7q.jpg
-
-echo
-echo "✅ Установка завершена."
-echo "➡ Выйдите в TTY (Ctrl+Alt+F3), войдите и запустите Hyprland командой:"
-echo
-echo "    Hyprland"
+# === Завершение ===
+echo "[DONE] Hyprland установлен/переустановлен успешно!" | tee -a "$LOG_FILE"

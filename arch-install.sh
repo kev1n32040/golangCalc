@@ -47,3 +47,6 @@ search-start=Control+Shift+F
 search-next=Control+F3
 search-prev=Shift+F3
 search-exit=Escape
+
+mkdir -p ~/.config/foot
+cp /usr/share/doc/foot/examples/foot.ini ~/.config/foot/foot.ini

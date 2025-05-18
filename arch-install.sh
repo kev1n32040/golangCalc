@@ -50,3 +50,10 @@ search-exit=Escape
 
 mkdir -p ~/.config/foot
 cp /usr/share/doc/foot/examples/foot.ini ~/.config/foot/foot.ini
+
+input {
+    kb_layout = us,ru
+    kb_variant =
+    kb_model =
+    kb_options = grp:alt_shift_toggle
+}
